@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f4f4f2;
+  --card: #ffffff;
+  --fg: #1a1a19;
+  --muted: #6f6e69;
+  --line: #e4e3df;
+  --accent: #0f766e;
+  --accent-fg: #ffffff;
+  --accent-soft: #e6f4f1;
+  --ok: #047857;
+  --warn: #b45309;
+  --bad: #c2410c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0f0f;
+    --card: #1a1b1b;
+    --fg: #f2f2ef;
+    --muted: #a3a29c;
+    --line: #2c2d2c;
+    --accent: #2dd4bf;
+    --accent-fg: #052e2a;
+    --accent-soft: #10302c;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --bad: #fb923c;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --font-sans: var(--font-geist-sans);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-card;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-muted;
+  }
+  /* 16px mínimo para que iOS no haga zoom al enfocar */
+  .input {
+    @apply w-full rounded-xl border border-line bg-bg px-3.5 py-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3.5 text-base font-semibold text-accent-fg transition active:scale-[0.98] disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-card px-4 py-3 text-base font-medium transition active:scale-[0.98] disabled:opacity-50;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-2 text-sm font-medium transition;
+  }
+  .chip-on {
+    @apply border-accent bg-accent-soft text-accent;
+  }
+}
