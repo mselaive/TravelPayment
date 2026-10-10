@@ -3,8 +3,8 @@
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Plane } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { AppLogo } from "./app-logo";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import type { Expense, GroupReceipt, GroupRequest, Profile, Trip } from "@/lib/types";
 
@@ -209,9 +209,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 function Splash({ error, onRetry }: { error: string | null; onRetry: () => void }) {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="flex size-14 animate-pulse items-center justify-center rounded-2xl bg-accent text-accent-fg">
-        <Plane className="size-7" />
-      </div>
+      <AppLogo className="size-14 animate-pulse" />
       {error ? (
         <>
           <p className="text-sm text-bad">No se pudieron cargar los datos: {error}</p>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Users } from "lucide-react";
 import { useApp } from "@/components/app-provider";
+import { AppLogo } from "@/components/app-logo";
 import { ExpenseItem } from "@/components/expense-item";
 import { ExpenseSheet } from "@/components/expense-sheet";
 import { QuickAdd } from "@/components/quick-add";
@@ -21,9 +22,23 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <p className="text-sm text-muted">{fmtDayLong(today)}</p>
-        <h1 className="text-2xl font-bold">Hola, {me.display_name.split(" ")[0]}</h1>
+      <header className="space-y-4">
+        <div className="flex items-center gap-2.5">
+          <AppLogo />
+          <span className="text-xl font-bold tracking-tight">Viáticos</span>
+          {trip && (
+            <Link
+              href="/settings"
+              className="ml-auto max-w-[45%] truncate rounded-full border border-line bg-card px-3 py-1 text-xs text-muted"
+            >
+              {trip.name}
+            </Link>
+          )}
+        </div>
+        <div>
+          <p className="text-sm text-muted">{fmtDayLong(today)}</p>
+          <h1 className="text-2xl font-bold">Hola, {me.display_name.split(" ")[0]}</h1>
+        </div>
       </header>
 
       {requests.length > 0 && (

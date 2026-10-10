@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Plane } from "lucide-react";
+import { AppLogo } from "@/components/app-logo";
 import { signIn, signUp, type AuthState } from "./actions";
 
 export default function LoginPage() {
@@ -16,9 +16,7 @@ export default function LoginPage() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-10">
       <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-accent text-accent-fg shadow-lg">
-          <Plane className="size-8" />
-        </div>
+        <AppLogo className="mx-auto mb-4 size-16 shadow-lg" />
         <h1 className="text-2xl font-bold">Viáticos</h1>
         <p className="mt-1 text-sm text-muted">US$80 por día, sin hojas de cálculo</p>
       </div>
