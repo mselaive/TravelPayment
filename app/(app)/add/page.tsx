@@ -6,6 +6,7 @@ import { Camera, ImageIcon, Loader2, PenLine, Plus, Sparkles, Users, X } from "l
 import { useApp } from "@/components/app-provider";
 import { CategoryPicker, DateField, TextField } from "@/components/fields";
 import { MoneyField, useFxRate } from "@/components/money-input";
+import { reconcileScanDate } from "@/lib/budget";
 import { fmtDay, fmtMoney, parseAmount, todayISO } from "@/lib/format";
 import { clearAddIntent, peekAddIntent } from "@/lib/intent";
 import { prepareReceipt, scanReceipt, uploadReceipt } from "@/lib/receipt";
@@ -96,7 +97,11 @@ function AddExpense() {
     setPhoto({ previewUrl: URL.createObjectURL(blob), upload });
 
     try {
-      const r = await scanReceipt(blob, ctrl.signal);
+      const r = await scanReceipt(
+        blob,
+        { today: todayISO(), tripStart: app.trip?.start_date, tripEnd: app.trip?.end_date },
+        ctrl.signal,
+      );
       const t = touched.current;
       if (r.total != null && !t.has("amount")) {
         setAmountText(String(r.total));
@@ -107,7 +112,7 @@ function AddExpense() {
       if (!t.has("category")) setCategory(r.category);
       // La fecha impresa en la boleta manda; el día elegido solo se usa si la boleta no trae fecha.
       if (r.date && !t.has("date")) {
-        setDate(r.date);
+        setDate(reconcileScanDate(r.date, app.trip));
         setDateFromScan(true);
       }
       setScanNote(
@@ -168,6 +173,14 @@ function AddExpense() {
     }
     const rate = currency === "MXN" ? fx.rate : (fx.rate ?? 1);
     if (!rate) return app.toast("Falta el tipo de cambio", "bad");
+    if (
+      outOfTrip &&
+      !window.confirm(
+        `La fecha (${fmtDay(date)}) está fuera del viaje (${fmtDay(trip.start_date)} – ${fmtDay(trip.end_date)}), así que no contará en tu viático diario.\n\n¿Guardar igual?`,
+      )
+    ) {
+      return;
+    }
 
     setSaving(true);
     const receiptPath = photo ? await photo.upload : null;
@@ -203,7 +216,7 @@ function AddExpense() {
       return app.toast("No se pudo guardar: " + error.message, "bad");
     }
     await app.refresh();
-    app.toast(isGroup && participants.length ? "Boleta grupal enviada ✓" : "Gasto guardado ✓");
+    app.toast(`${isGroup && participants.length ? "Boleta grupal enviada" : "Gasto guardado"} · ${fmtDay(date)} ✓`);
     // replace: que "atrás" no vuelva al formulario ya guardado.
     router.replace(date === todayISO() ? "/" : "/days");
   }
@@ -313,7 +326,7 @@ function AddExpense() {
           value={date}
           onChange={onDate}
           hint={dateFromScan ? "(de la boleta)" : undefined}
-          warning={outOfTrip ? "Esta fecha está fuera de las fechas del viaje." : null}
+          warning={outOfTrip ? "⚠️ Fuera de las fechas del viaje: no contará en tu viático diario." : null}
         />
         <TextField
           label="Comercio"

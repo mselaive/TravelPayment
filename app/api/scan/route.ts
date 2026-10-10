@@ -21,12 +21,18 @@ export async function POST(request: Request) {
     return Response.json({ error: "La imagen es demasiado grande" }, { status: 413 });
   }
 
+  const isoField = (key: string) => {
+    const v = form?.get(key);
+    return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
+  };
+
   try {
     const result = await scanWithGemini({
       apiKey,
       model: process.env.GEMINI_MODEL,
       base64: Buffer.from(await file.arrayBuffer()).toString("base64"),
       mimeType: file.type || "image/jpeg",
+      context: { today: isoField("today"), tripStart: isoField("trip_start"), tripEnd: isoField("trip_end") },
     });
     return Response.json(result);
   } catch (e) {

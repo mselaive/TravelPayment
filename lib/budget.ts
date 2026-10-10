@@ -52,3 +52,16 @@ export function budgetTone(remaining: number, perDiem: number) {
   if (remaining < perDiem * 0.25) return "warn" as const;
   return "ok" as const;
 }
+
+/**
+ * Si una fecha leída de la boleta cae fuera del viaje pero con día y mes invertidos cae dentro
+ * (p. ej. 2026-08-10 por "10/8/26" de un recibo en inglés), usamos la invertida.
+ */
+export function reconcileScanDate(iso: string, trip: Trip | null) {
+  if (!trip) return iso;
+  const inTrip = (d: string) => d >= trip.start_date && d <= trip.end_date;
+  if (inTrip(iso)) return iso;
+  const [y, m, d] = iso.split("-");
+  const swapped = `${y}-${d}-${m}`;
+  return Number(d) <= 12 && inTrip(swapped) ? swapped : iso;
+}

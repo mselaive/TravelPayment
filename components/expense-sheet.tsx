@@ -115,7 +115,19 @@ export function ExpenseSheet({ expense, onClose }: { expense: Expense; onClose: 
           onCurrency={setCurrency}
           fx={fx}
         />
-        <DateField value={date} onChange={setDate} />
+        <DateField
+          value={date}
+          onChange={(v) => {
+            setDate(v);
+            // Nueva fecha → tipo de cambio de ese día (se puede volver a corregir a mano).
+            fx.setManual(null);
+          }}
+          warning={
+            app.trip && (date < app.trip.start_date || date > app.trip.end_date)
+              ? "⚠️ Fuera de las fechas del viaje: no cuenta en tu viático diario."
+              : null
+          }
+        />
         <TextField label="Comercio" value={merchant} onChange={setMerchant} placeholder="Ej. Tacos El Güero" />
         <CategoryPicker value={category} onChange={setCategory} />
         <TextField label="Nota (opcional)" value={notes} onChange={setNotes} />
