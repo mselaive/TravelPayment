@@ -26,7 +26,17 @@ const SCHEMA = {
 // Si un modelo está saturado (503) o sin cuota gratis (429), probamos el siguiente:
 // en la capa gratuita las cuotas son por modelo.
 const FALLBACK_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash"];
-const RETRYABLE = new Set([429, 500, 503, 504]);
+const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
+// Tiempo máximo por modelo. Sin esto el SDK reintenta solo con esperas de hasta 60 s.
+// Gemini rechaza plazos (deadline) menores a 10 s; cortamos nosotros a los 9 s.
+const SERVER_DEADLINE_MS = 10_000;
+const ATTEMPT_TIMEOUT_MS = 9_000;
+
+function shouldTryNextModel(e: unknown) {
+  const err = e as { status?: number; name?: string; message?: string };
+  if (err.status) return RETRYABLE.has(err.status);
+  return err.name === "AbortError" || err.name === "TimeoutError" || /abort|timeout|timed out|fetch failed/i.test(err.message ?? "");
+}
 
 /** Lee una boleta con Gemini y devuelve los datos ya validados. */
 export async function scanWithGemini(opts: {
@@ -43,9 +53,8 @@ export async function scanWithGemini(opts: {
       return await scanOnce(ai, model, opts.base64, opts.mimeType);
     } catch (e) {
       lastError = e;
-      const status = (e as { status?: number }).status;
-      if (!status || !RETRYABLE.has(status)) throw e;
-      console.warn(`Gemini ${model} respondió ${status}, probando otro modelo`);
+      if (!shouldTryNextModel(e)) throw e;
+      console.warn(`Gemini ${model} falló (${(e as { status?: number }).status ?? (e as Error).message}), probando otro modelo`);
     }
   }
   throw lastError;
@@ -61,6 +70,8 @@ async function scanOnce(ai: GoogleGenAI, model: string, base64: string, mimeType
       },
     ],
     config: {
+      httpOptions: { timeout: SERVER_DEADLINE_MS, retryOptions: { attempts: 1 } },
+      abortSignal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
       responseMimeType: "application/json",
       responseJsonSchema: SCHEMA,
       temperature: 0,

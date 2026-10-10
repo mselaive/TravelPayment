@@ -8,7 +8,10 @@ import { setAddIntent } from "@/lib/intent";
 export function QuickAdd({ date, compact = false }: { date?: string; compact?: boolean }) {
   const router = useRouter();
 
-  const onFile = (file: File | undefined) => {
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Limpiar el input: esta pantalla queda viva en segundo plano y si no, elegir la misma foto no dispararía onChange.
+    e.target.value = "";
     if (!file) return;
     setAddIntent({ file, date });
     router.push("/add");
@@ -24,14 +27,14 @@ export function QuickAdd({ date, compact = false }: { date?: string; compact?: b
           accept="image/*"
           capture="environment"
           className="hidden"
-          onChange={(e) => onFile(e.target.files?.[0])}
+          onChange={onFile}
         />
       </label>
       {compact && (
         <label className="btn-secondary cursor-pointer py-4">
           <ImageIcon className="size-5" />
           Galería
-          <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input type="file" accept="image/*" className="hidden" onChange={onFile} />
         </label>
       )}
       <button

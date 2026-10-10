@@ -20,10 +20,10 @@ export async function uploadReceipt(supabase: SupabaseClient, userId: string, bl
   return path;
 }
 
-export async function scanReceipt(blob: Blob): Promise<ScanResult> {
+export async function scanReceipt(blob: Blob, signal?: AbortSignal): Promise<ScanResult> {
   const body = new FormData();
   body.append("image", blob, "boleta.jpg");
-  const res = await fetch("/api/scan", { method: "POST", body });
+  const res = await fetch("/api/scan", { method: "POST", body, signal });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error ?? "No se pudo leer la boleta");
   return json as ScanResult;

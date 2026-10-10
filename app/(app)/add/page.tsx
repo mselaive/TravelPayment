@@ -14,7 +14,16 @@ import type { Category, Currency } from "@/lib/types";
 type Photo = { previewUrl: string; upload: Promise<string | null> };
 type Field = "amount" | "currency" | "date" | "merchant" | "category";
 
+const SCAN_TIMEOUT_MS = 45_000;
+
 export default function AddPage() {
+  // Next mantiene vivas las pantallas visitadas (<Activity>) y restauraría la boleta anterior.
+  // Con esta key cada entrada a "Agregar" empieza un gasto nuevo; con atrás/adelante se conserva el borrador.
+  const { bfcacheId } = useRouter();
+  return <AddExpense key={bfcacheId} />;
+}
+
+function AddExpense() {
   const app = useApp();
   const router = useRouter();
   const [intent] = useState(peekAddIntent);
@@ -42,6 +51,7 @@ export default function AddPage() {
   const fx = useFxRate(date);
   const touched = useRef(new Set<Field>());
   const started = useRef(false);
+  const scanCtrl = useRef<AbortController | null>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
@@ -69,6 +79,12 @@ export default function AddPage() {
   }
 
   async function handleFile(file: File) {
+    // Si había una lectura en curso (p. ej. "Otra foto"), se descarta.
+    scanCtrl.current?.abort("replaced");
+    const ctrl = new AbortController();
+    scanCtrl.current = ctrl;
+    const timer = setTimeout(() => ctrl.abort("timeout"), SCAN_TIMEOUT_MS);
+
     setStage("form");
     setScanning(true);
     setScanNote(null);
@@ -80,7 +96,7 @@ export default function AddPage() {
     setPhoto({ previewUrl: URL.createObjectURL(blob), upload });
 
     try {
-      const r = await scanReceipt(blob);
+      const r = await scanReceipt(blob, ctrl.signal);
       const t = touched.current;
       if (r.total != null && !t.has("amount")) {
         setAmountText(String(r.total));
@@ -89,7 +105,8 @@ export default function AddPage() {
       }
       if (r.merchant && !t.has("merchant")) setMerchant(r.merchant);
       if (!t.has("category")) setCategory(r.category);
-      if (r.date && !t.has("date") && !intent.date) {
+      // La fecha impresa en la boleta manda; el día elegido solo se usa si la boleta no trae fecha.
+      if (r.date && !t.has("date")) {
         setDate(r.date);
         setDateFromScan(true);
       }
@@ -101,10 +118,21 @@ export default function AddPage() {
             : { text: "Datos leídos de la boleta. Revísalos antes de guardar.", tone: "ok" },
       );
     } catch (e) {
-      setScanNote({ text: (e as Error).message, tone: "warn" });
+      if (!ctrl.signal.aborted) setScanNote({ text: (e as Error).message, tone: "warn" });
+      else if (ctrl.signal.reason === "timeout") {
+        setScanNote({ text: "La lectura tardó demasiado: escribe los datos a mano.", tone: "warn" });
+      }
     } finally {
-      setScanning(false);
+      clearTimeout(timer);
+      if (scanCtrl.current === ctrl) {
+        scanCtrl.current = null;
+        setScanning(false);
+      }
     }
+  }
+
+  function skipScan() {
+    scanCtrl.current?.abort("skip");
   }
 
   // Si venimos de Inicio con la foto ya tomada, procesarla una sola vez.
@@ -176,7 +204,8 @@ export default function AddPage() {
     }
     await app.refresh();
     app.toast(isGroup && participants.length ? "Boleta grupal enviada ✓" : "Gasto guardado ✓");
-    router.push(date === todayISO() ? "/" : "/days");
+    // replace: que "atrás" no vuelva al formulario ya guardado.
+    router.replace(date === todayISO() ? "/" : "/days");
   }
 
   if (stage === "choose") {
@@ -238,6 +267,13 @@ export default function AddPage() {
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/50 text-white">
                 <Loader2 className="size-8 animate-spin" />
                 <span className="text-sm font-medium">Leyendo boleta…</span>
+                <button
+                  type="button"
+                  onClick={skipScan}
+                  className="mt-1 rounded-full bg-white/20 px-3 py-1.5 text-xs font-medium backdrop-blur"
+                >
+                  Escribir a mano
+                </button>
               </div>
             )}
           </div>
