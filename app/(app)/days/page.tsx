@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { ExpenseItem } from "@/components/expense-item";
 import { ExpenseSheet } from "@/components/expense-sheet";
 import { QuickAdd } from "@/components/quick-add";
+import { useClpRates } from "@/components/use-clp-rates";
 import { budgetTone, summarizeDay, tripBalance, tripDays, type DaySummary } from "@/lib/budget";
-import { clpRateFor, getClpRates, type ClpRates } from "@/lib/fx-client";
+import { clpRateFor, type ClpRates } from "@/lib/fx-client";
 import { fmtCLP, fmtDay, fmtDayShort, fmtUSD, todayISO } from "@/lib/format";
 import type { Expense } from "@/lib/types";
 
@@ -87,20 +88,6 @@ export default function DaysPage() {
       {open && <ExpenseSheet expense={open} onClose={() => setOpen(null)} />}
     </div>
   );
-}
-
-function useClpRates() {
-  const [clp, setClp] = useState<ClpRates | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    getClpRates().then((v) => {
-      if (!cancelled) setClp(v);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return clp;
 }
 
 function Stat({ label, value, className = "" }: { label: string; value: string; className?: string }) {

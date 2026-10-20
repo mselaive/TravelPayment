@@ -1,9 +1,11 @@
 "use client";
 
 import { Camera, Check, Users } from "lucide-react";
-import { fmtMoney, fmtUSD } from "@/lib/format";
+import { fmtCLP, fmtMoney, fmtUSD } from "@/lib/format";
+import { clpRateFor } from "@/lib/fx-client";
 import { CATEGORIES, type Expense } from "@/lib/types";
 import { useApp } from "./app-provider";
+import { useClpRates } from "./use-clp-rates";
 
 export function UploadedCheckbox({ expense }: { expense: Expense }) {
   const { setUploaded } = useApp();
@@ -36,6 +38,7 @@ export function ExpenseItem({
   showCheckbox?: boolean;
 }) {
   const cat = CATEGORIES.find((c) => c.value === expense.category) ?? CATEGORIES[3];
+  const clp = useClpRates();
   return (
     <li className="flex items-center gap-3 py-3">
       {showCheckbox && <UploadedCheckbox expense={expense} />}
@@ -57,7 +60,14 @@ export function ExpenseItem({
             )}
           </span>
         </span>
-        <span className="shrink-0 font-semibold tabular-nums">{fmtUSD(expense.amount_usd)}</span>
+        <span className="shrink-0 text-right">
+          <span className="block font-semibold tabular-nums">{fmtUSD(expense.amount_usd)}</span>
+          {clp && (
+            <span className="block text-[11px] text-muted tabular-nums">
+              ≈ {fmtCLP(expense.amount_usd * clpRateFor(clp, expense.date))}
+            </span>
+          )}
+        </span>
       </button>
     </li>
   );
