@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims) return Response.json({ error: "No autenticado" }, { status: 401 });
 
+  if (request.nextUrl.searchParams.get("currency") === "CLP") return clpRates();
+
   const today = new Date().toISOString().slice(0, 10);
   const asked = request.nextUrl.searchParams.get("date") ?? today;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(asked) && asked <= today ? asked : today;
@@ -33,6 +35,21 @@ export async function GET(request: NextRequest) {
   }
 
   return Response.json({ error: "No se pudo obtener el tipo de cambio" }, { status: 502 });
+}
+
+// Pesos chilenos por 1 USD: dólar observado del Banco Central de Chile (mindicador.cl, último mes,
+// gratis y sin key); si falla, el valor actual de open.er-api.com.
+async function clpRates() {
+  const mi = await fetchJson<{ serie?: { fecha: string; valor: number }[] }>("https://mindicador.cl/api/dolar");
+  if (mi?.serie?.length) {
+    const rates = Object.fromEntries(mi.serie.map((s) => [s.fecha.slice(0, 10), Number(s.valor)]));
+    return Response.json({ rates, latest: Number(mi.serie[0].valor), source: "mindicador" });
+  }
+  const er = await fetchJson<{ rates: { CLP: number } }>("https://open.er-api.com/v6/latest/USD");
+  if (er?.rates?.CLP) {
+    return Response.json({ rates: {}, latest: Math.round(er.rates.CLP * 100) / 100, source: "open.er-api" });
+  }
+  return Response.json({ error: "No se pudo obtener el dólar en CLP" }, { status: 502 });
 }
 
 async function fetchJson<T>(url: string): Promise<T | null> {

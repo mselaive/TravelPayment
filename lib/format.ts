@@ -7,6 +7,12 @@ export function fmtUSD(n: number) {
   return `${sign}US$${num.format(Math.abs(n))}`;
 }
 
+const clp = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 });
+
+export function fmtCLP(n: number) {
+  return `$${clp.format(Math.round(n))} CLP`;
+}
+
 export function fmtMoney(n: number, currency: Currency) {
   return currency === "USD" ? fmtUSD(n) : `$${num.format(n)} MXN`;
 }
@@ -46,6 +52,12 @@ const longFmt = new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "numeri
 
 export function fmtDay(iso: string) {
   return dayFmt.format(parseISO(iso)).replace(/\./g, "");
+}
+
+/** Etiqueta corta para listas: "Dom 4 oct". */
+export function fmtDayShort(iso: string) {
+  const s = fmtDay(iso).replace(/,/g, "").replace(" de ", " ");
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export function fmtDayLong(iso: string) {

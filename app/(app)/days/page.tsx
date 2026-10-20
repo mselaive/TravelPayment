@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useApp } from "@/components/app-provider";
@@ -8,7 +8,8 @@ import { ExpenseItem } from "@/components/expense-item";
 import { ExpenseSheet } from "@/components/expense-sheet";
 import { QuickAdd } from "@/components/quick-add";
 import { budgetTone, summarizeDay, tripBalance, tripDays, type DaySummary } from "@/lib/budget";
-import { fmtDay, fmtUSD, todayISO } from "@/lib/format";
+import { clpRateFor, getClpRates, type ClpRates } from "@/lib/fx-client";
+import { fmtCLP, fmtDay, fmtDayShort, fmtUSD, todayISO } from "@/lib/format";
 import type { Expense } from "@/lib/types";
 
 const toneText = { ok: "text-ok", warn: "text-warn", bad: "text-bad" };
@@ -19,6 +20,7 @@ export default function DaysPage() {
   const today = todayISO();
   const [expanded, setExpanded] = useState<string | null>(today);
   const [open, setOpen] = useState<Expense | null>(null);
+  const clp = useClpRates();
 
   if (!trip) {
     return (
@@ -66,6 +68,7 @@ export default function DaysPage() {
             expanded={expanded === d.date}
             onToggle={() => setExpanded(expanded === d.date ? null : d.date)}
             onOpen={setOpen}
+            clp={clp}
           />
         ))}
       </ul>
@@ -86,6 +89,20 @@ export default function DaysPage() {
   );
 }
 
+function useClpRates() {
+  const [clp, setClp] = useState<ClpRates | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getClpRates().then((v) => {
+      if (!cancelled) setClp(v);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return clp;
+}
+
 function Stat({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
     <div className="px-2">
@@ -103,6 +120,7 @@ function DayRow({
   expanded,
   onToggle,
   onOpen,
+  clp,
 }: {
   day: DaySummary;
   perDiem: number;
@@ -111,6 +129,7 @@ function DayRow({
   expanded: boolean;
   onToggle: () => void;
   onOpen: (e: Expense) => void;
+  clp: ClpRates | null;
 }) {
   const tone = budgetTone(day.remaining, perDiem);
   const pct = Math.min(100, (day.spent / perDiem) * 100);
@@ -118,25 +137,30 @@ function DayRow({
 
   return (
     <li className={`card overflow-hidden ${isToday ? "border-accent" : ""}`}>
-      <button type="button" onClick={onToggle} className="flex w-full items-center gap-3 p-4 text-left">
-        <div className="w-20 shrink-0">
-          <p className={`font-semibold capitalize ${idle ? "text-muted" : ""}`}>{fmtDay(day.date)}</p>
-          {isToday && <p className="text-xs font-medium text-accent">Hoy</p>}
-        </div>
-        <div className="flex-1">
-          <div className="h-2 overflow-hidden rounded-full bg-bg">
-            <div className={`h-full rounded-full ${toneBar[tone]}`} style={{ width: `${pct}%` }} />
-          </div>
-          <p className="mt-1 text-xs text-muted">
-            {day.count} gasto{day.count === 1 ? "" : "s"} · {fmtUSD(day.spent)}
-            {day.pendingUpload > 0 && <span className="text-warn"> · {day.pendingUpload} por subir</span>}
+      <button type="button" onClick={onToggle} className="w-full p-4 text-left">
+        <div className="flex items-center gap-2">
+          <p className={`font-semibold whitespace-nowrap ${idle ? "text-muted" : ""}`}>{fmtDayShort(day.date)}</p>
+          {isToday && (
+            <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">Hoy</span>
+          )}
+          <p className="ml-auto text-right whitespace-nowrap">
+            <span className={`font-semibold tabular-nums ${idle ? "text-muted" : toneText[tone]}`}>
+              {fmtUSD(day.remaining)}
+            </span>{" "}
+            <span className="text-xs text-muted">queda</span>
           </p>
+          <ChevronDown className={`size-5 shrink-0 text-muted transition ${expanded ? "rotate-180" : ""}`} />
         </div>
-        <div className="text-right">
-          <p className={`font-semibold tabular-nums ${idle ? "text-muted" : toneText[tone]}`}>{fmtUSD(day.remaining)}</p>
-          <p className="text-[11px] text-muted">queda</p>
+        <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-bg">
+          <div className={`h-full rounded-full ${toneBar[tone]}`} style={{ width: `${pct}%` }} />
         </div>
-        <ChevronDown className={`size-5 shrink-0 text-muted transition ${expanded ? "rotate-180" : ""}`} />
+        <p className="mt-1.5 text-xs text-muted">
+          {day.count} gasto{day.count === 1 ? "" : "s"} · {fmtUSD(day.spent)}
+          {day.pendingUpload > 0 && <span className="text-warn"> · {day.pendingUpload} por subir</span>}
+        </p>
+        {clp && day.spent > 0 && (
+          <p className="text-xs text-muted tabular-nums">≈ {fmtCLP(day.spent * clpRateFor(clp, day.date))}</p>
+        )}
       </button>
       {expanded && (
         <div className="border-t border-line px-3 pb-3">

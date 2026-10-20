@@ -6,7 +6,7 @@ import { useApp } from "@/components/app-provider";
 import { ExpenseItem } from "@/components/expense-item";
 import { ExpenseSheet } from "@/components/expense-sheet";
 import { GroupRequestCard } from "@/components/group-request-card";
-import { fmtDay, fmtUSD } from "@/lib/format";
+import { fmtDayShort, fmtUSD } from "@/lib/format";
 import type { Expense } from "@/lib/types";
 
 export default function PendingPage() {
@@ -59,7 +59,7 @@ export default function PendingPage() {
             {[...byDay.entries()].map(([date, items]) => (
               <div key={date}>
                 <p className="mb-1 flex justify-between px-1 text-sm font-medium text-muted">
-                  <span className="capitalize">{fmtDay(date)}</span>
+                  <span>{fmtDayShort(date)}</span>
                   <span>{fmtUSD(items.reduce((s, e) => s + e.amount_usd, 0))}</span>
                 </p>
                 <ul className="card divide-y divide-line px-3">
